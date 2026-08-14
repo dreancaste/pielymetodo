@@ -6,7 +6,7 @@ import ProductCard from "@/components/ProductCard";
 import { categories, products } from "@/data/products";
 
 const DIACRITICS = /[̀-ͯ]/g;
-const PAGE_SIZE = 24;
+const PAGE_SIZE = 10;
 
 function normalize(value: string) {
   return value.toLowerCase().normalize("NFD").replace(DIACRITICS, "");
@@ -17,7 +17,7 @@ export default function CatalogGrid() {
   const initialBrand = searchParams.get("marca") ?? "todos";
   const [activeBrand, setActiveBrand] = useState(initialBrand);
   const [query, setQuery] = useState("");
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [page, setPage] = useState(0);
   const [appliedFilters, setAppliedFilters] = useState({ activeBrand, query });
 
   const filtered = useMemo(() => {
@@ -31,10 +31,11 @@ export default function CatalogGrid() {
 
   if (appliedFilters.activeBrand !== activeBrand || appliedFilters.query !== query) {
     setAppliedFilters({ activeBrand, query });
-    setVisibleCount(PAGE_SIZE);
+    setPage(0);
   }
 
-  const visible = filtered.slice(0, visibleCount);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const visible = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
 
   return (
     <div>
@@ -91,14 +92,26 @@ export default function CatalogGrid() {
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
-          {visibleCount < filtered.length && (
-            <div className="mt-10 flex justify-center">
+          {totalPages > 1 && (
+            <div className="mt-10 flex items-center justify-center gap-4">
               <button
                 type="button"
-                onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
-                className="rounded-full border border-ink/20 px-6 py-3 text-sm font-medium text-ink transition hover:border-rose-deep hover:text-rose-deep"
+                disabled={page === 0}
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                className="rounded-full border border-ink/20 px-6 py-3 text-sm font-medium text-ink transition hover:border-rose-deep hover:text-rose-deep disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-ink/20 disabled:hover:text-ink"
               >
-                Cargar más productos
+                Anteriores
+              </button>
+              <span className="text-sm text-ink-soft">
+                Página {page + 1} de {totalPages}
+              </span>
+              <button
+                type="button"
+                disabled={page >= totalPages - 1}
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                className="rounded-full border border-ink/20 px-6 py-3 text-sm font-medium text-ink transition hover:border-rose-deep hover:text-rose-deep disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-ink/20 disabled:hover:text-ink"
+              >
+                Mostrar más
               </button>
             </div>
           )}
