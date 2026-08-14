@@ -29,7 +29,7 @@ export default function Navbar() {
             </svg>
           </span>
           <span className="font-serif text-xl tracking-wide text-ink">
-            Bloom Cosmética
+            Piel y Método
           </span>
         </Link>
         <ul className="hidden items-center gap-8 text-sm font-medium text-ink-soft sm:flex">

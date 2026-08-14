@@ -15,7 +15,7 @@ const body = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Bloom Cosmética | Cuidado facial profesional",
+  title: "Piel y Método | Cuidado facial profesional",
   description:
     "Descubrí nuestra línea de cuidado facial profesional: Idraet, Lidherma, Icono y Dermassy.",
 };

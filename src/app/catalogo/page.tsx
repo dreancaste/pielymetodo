@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import CatalogGrid from "@/components/CatalogGrid";
 
 export const metadata: Metadata = {
-  title: "Catálogo | Bloom Cosmética",
+  title: "Catálogo | Piel y Método",
   description:
     "Explorá nuestro catálogo de cuidado facial profesional de Idraet, Lidherma, Icono y Dermassy.",
 };

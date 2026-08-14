@@ -5,7 +5,7 @@ export default function Footer() {
     <footer className="border-t border-rose-light/60 bg-cream-soft/60">
       <div className="mx-auto grid max-w-6xl gap-10 px-6 py-12 sm:grid-cols-3">
         <div>
-          <span className="font-serif text-lg text-ink">Bloom Cosmética</span>
+          <span className="font-serif text-lg text-ink">Piel y Método</span>
           <p className="mt-3 text-sm text-ink-soft">
             Productos cosmetológicos formulados para realzar tu belleza
             natural, con ingredientes de calidad profesional.
@@ -44,13 +44,13 @@ export default function Footer() {
             Contacto
           </h4>
           <ul className="mt-3 space-y-2 text-sm text-ink-soft">
-            <li>hola@bloomcosmetica.com</li>
+            <li>hola@pielymetodo.com</li>
             <li>Lunes a Viernes, 9 a 18 hs</li>
           </ul>
         </div>
       </div>
       <div className="border-t border-rose-light/60 px-6 py-4 text-center text-xs text-ink-soft">
-        © {new Date().getFullYear()} Bloom Cosmética. Todos los derechos
+        © {new Date().getFullYear()} Piel y Método. Todos los derechos
         reservados.
       </div>
     </footer>

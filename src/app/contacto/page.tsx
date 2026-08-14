@@ -2,15 +2,14 @@ import type { Metadata } from "next";
 import ContactForm from "@/components/ContactForm";
 
 export const metadata: Metadata = {
-  title: "Contacto | Bloom Cosmética",
+  title: "Contacto | Piel y Método",
   description:
     "Contactanos para consultas sobre nuestros productos cosmetológicos o para recibir asesoramiento personalizado.",
 };
 
 const info = [
-  { label: "Email", value: "hola@bloomcosmetica.com" },
+  { label: "Email", value: "hola@pielymetodo.com" },
   { label: "Teléfono", value: "+54 11 5555-0123" },
-  { label: "Horario", value: "Lunes a Viernes, 9 a 18 hs" },
   { label: "Ubicación", value: "Buenos Aires, Argentina" },
 ];
 
