@@ -1,0 +1,43 @@
+name: Update product prices
+
+on:
+  schedule:
+    # 06:00 UTC = 03:00 Argentina (ART, UTC-3)
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  scrape-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx playwright install --with-deps chromium
+
+      - name: Scrape current prices
+        env:
+          SITE_EMAIL: ${{ secrets.SITE_EMAIL }}
+          SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
+        run: npm run scrape-products
+
+      - name: Commit and push if prices changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- src/data/products.ts; then
+            echo "No price changes."
+          else
+            git add src/data/products.ts
+            git commit -m "chore: update product prices"
+            git push
+          fi
