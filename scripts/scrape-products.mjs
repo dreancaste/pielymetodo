@@ -19,6 +19,7 @@ const BRANDS = ["IDRAET", "LIDHERMA", "ICONO", "DERMASSY"];
 const MAX_PRICE = 50000;
 const MARKUP = 1.2;
 const MIN_EXPECTED_PRODUCTS = 300; // sanity floor so a broken scrape can't wipe the catalog
+const MIN_EXPECTED_SUBCATEGORIES = 10;
 
 const brandMeta = {
   IDRAET: { slug: "idraet", name: "Idraet" },
@@ -55,14 +56,35 @@ function markup(price) {
   return Math.round(price * MARKUP);
 }
 
-async function scrapeBrand(page, brand, results) {
+async function discoverSubcategories(page) {
+  await page.goto("https://www.cosmetologasargentinas.com/facial/", { waitUntil: "domcontentloaded" });
+  const links = await page.$$eval("a[href*='/facial/']", (as) =>
+    [...new Set(as.map((a) => a.getAttribute("href")))]
+  );
+  const slugs = [...new Set(
+    links
+      .filter((h) => /\/facial\/[a-z0-9-]+\/?$/.test(h) && !h.endsWith("/facial/"))
+      .map((h) => h.split("/").filter(Boolean).pop())
+  )];
+
+  const subcategories = [];
+  for (const slug of slugs) {
+    await page.goto(`https://www.cosmetologasargentinas.com/facial/${slug}/`, { waitUntil: "domcontentloaded" });
+    const name = await page.locator("h1").first().textContent().catch(() => null);
+    subcategories.push({ slug, name: name ? name.trim() : slug });
+  }
+  return subcategories;
+}
+
+async function scrapeBrandSubcategory(page, brand, subcatSlug, results) {
   let pageNum = 1;
   let total = null;
+  let collected = 0;
   while (true) {
-    const url = `https://www.cosmetologasargentinas.com/facial/?q=Marca-${brand}&page=${pageNum}`;
+    const url = `https://www.cosmetologasargentinas.com/facial/${subcatSlug}/?q=Marca-${brand}&page=${pageNum}`;
     await page.goto(url, { waitUntil: "domcontentloaded" });
     await page
-      .waitForSelector("article.product-miniature, .js-product-miniature", { timeout: 15000 })
+      .waitForSelector("article.product-miniature, .js-product-miniature, body", { timeout: 15000 })
       .catch(() => {});
 
     if (total === null) {
@@ -70,6 +92,7 @@ async function scrapeBrand(page, brand, results) {
       const m = bodyText.match(/Todos los productos \((\d+)\)/i);
       total = m ? parseInt(m[1], 10) : 0;
     }
+    if (total === 0) break;
 
     const cards = await page.$$eval("article.product-miniature, .js-product-miniature", (nodes) =>
       nodes.map((node) => {
@@ -93,6 +116,7 @@ async function scrapeBrand(page, brand, results) {
       if (!c.url || !c.name) continue;
       results.push({
         brand,
+        subcategory: subcatSlug,
         name: c.name,
         imgAlt: c.imgAlt,
         url: c.url,
@@ -102,10 +126,10 @@ async function scrapeBrand(page, brand, results) {
       });
     }
 
-    const collected = results.filter((p) => p.brand === brand).length;
+    collected += cards.length;
     if (cards.length === 0 || collected >= total) break;
     pageNum += 1;
-    if (pageNum > 40) break;
+    if (pageNum > 20) break;
   }
 }
 
@@ -132,9 +156,21 @@ async function main() {
     process.exit(1);
   }
 
+  const subcategories = await discoverSubcategories(page);
+  console.log(`Found ${subcategories.length} subcategories.`);
+  if (subcategories.length < MIN_EXPECTED_SUBCATEGORIES) {
+    await browser.close();
+    console.error(
+      `Only found ${subcategories.length} subcategories (expected at least ${MIN_EXPECTED_SUBCATEGORIES}). The site layout may have changed — aborting without touching products.ts.`
+    );
+    process.exit(1);
+  }
+
   const raw = [];
   for (const brand of BRANDS) {
-    await scrapeBrand(page, brand, raw);
+    for (const subcat of subcategories) {
+      await scrapeBrandSubcategory(page, brand, subcat.slug, raw);
+    }
     console.log(`${brand}: ${raw.filter((p) => p.brand === brand).length} products`);
   }
 
@@ -147,13 +183,14 @@ async function main() {
     process.exit(1);
   }
 
+  const subcatNameBySlug = new Map(subcategories.map((s) => [s.slug, s.name]));
   const seenIds = new Set();
   const products = [];
   for (const p of raw) {
     const brand = brandMeta[p.brand];
     if (!brand) continue;
     let id = slugify(p.url);
-    if (seenIds.has(id)) id = `${id}-${brand.slug}`;
+    if (seenIds.has(id)) continue; // same product can appear under more than one subcategory; keep the first
     seenIds.add(id);
 
     const price = markup(p.currentPrice);
@@ -165,6 +202,7 @@ async function main() {
       id,
       name: cleanName(p.name, p.imgAlt),
       brand: brand.slug,
+      subcategory: p.subcategory,
       price,
       compareAtPrice: compareAtPrice && compareAtPrice > price ? compareAtPrice : null,
       image: p.image,
@@ -179,6 +217,12 @@ async function main() {
     description: `Productos ${b.name} para cuidado facial profesional`,
   }));
 
+  const usedSubcatSlugs = [...new Set(products.map((p) => p.subcategory))];
+  const subcategoryList = subcategories
+    .filter((s) => usedSubcatSlugs.includes(s.slug))
+    .map((s) => ({ slug: s.slug, name: subcatNameBySlug.get(s.slug) || s.slug }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
   const ts = (v) => JSON.stringify(v);
   const lines = [];
   lines.push("export type Category = {");
@@ -187,10 +231,16 @@ async function main() {
   lines.push("  description: string;");
   lines.push("};");
   lines.push("");
+  lines.push("export type Subcategory = {");
+  lines.push("  slug: string;");
+  lines.push("  name: string;");
+  lines.push("};");
+  lines.push("");
   lines.push("export type Product = {");
   lines.push("  id: string;");
   lines.push("  name: string;");
   lines.push("  brand: string;");
+  lines.push("  subcategory: string;");
   lines.push("  price: number;");
   lines.push("  compareAtPrice: number | null;");
   lines.push("  image: string;");
@@ -198,10 +248,12 @@ async function main() {
   lines.push("");
   lines.push(`export const categories: Category[] = ${JSON.stringify(categories, null, 2)};`);
   lines.push("");
+  lines.push(`export const subcategories: Subcategory[] = ${JSON.stringify(subcategoryList, null, 2)};`);
+  lines.push("");
   lines.push("export const products: Product[] = [");
   for (const p of products) {
     lines.push(
-      `  { id: ${ts(p.id)}, name: ${ts(p.name)}, brand: ${ts(p.brand)}, price: ${p.price}, compareAtPrice: ${
+      `  { id: ${ts(p.id)}, name: ${ts(p.name)}, brand: ${ts(p.brand)}, subcategory: ${ts(p.subcategory)}, price: ${p.price}, compareAtPrice: ${
         p.compareAtPrice === null ? "null" : p.compareAtPrice
       }, image: ${ts(p.image)} },`
     );
@@ -219,7 +271,7 @@ async function main() {
 
   const outPath = path.join(__dirname, "..", "src", "data", "products.ts");
   fs.writeFileSync(outPath, lines.join("\n"), "utf8");
-  console.log(`Wrote ${products.length} products to ${outPath}`);
+  console.log(`Wrote ${products.length} products across ${subcategoryList.length} subcategories to ${outPath}`);
 }
 
 main().catch((err) => {

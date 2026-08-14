@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ProductCard from "@/components/ProductCard";
-import { categories, products } from "@/data/products";
+import { categories, subcategories, products } from "@/data/products";
 
 const DIACRITICS = /[̀-ͯ]/g;
 const PAGE_SIZE = 10;
@@ -15,22 +15,34 @@ function normalize(value: string) {
 export default function CatalogGrid() {
   const searchParams = useSearchParams();
   const initialBrand = searchParams.get("marca") ?? "todos";
+  const initialSubcategory = searchParams.get("subcategoria") ?? "todas";
   const [activeBrand, setActiveBrand] = useState(initialBrand);
+  const [activeSubcategory, setActiveSubcategory] = useState(initialSubcategory);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(0);
-  const [appliedFilters, setAppliedFilters] = useState({ activeBrand, query });
+  const [appliedFilters, setAppliedFilters] = useState({
+    activeBrand,
+    activeSubcategory,
+    query,
+  });
 
   const filtered = useMemo(() => {
     const normalizedQuery = normalize(query);
     return products.filter((product) => {
       const matchesBrand = activeBrand === "todos" || product.brand === activeBrand;
+      const matchesSubcategory =
+        activeSubcategory === "todas" || product.subcategory === activeSubcategory;
       const matchesQuery = normalize(product.name).includes(normalizedQuery);
-      return matchesBrand && matchesQuery;
+      return matchesBrand && matchesSubcategory && matchesQuery;
     });
-  }, [activeBrand, query]);
+  }, [activeBrand, activeSubcategory, query]);
 
-  if (appliedFilters.activeBrand !== activeBrand || appliedFilters.query !== query) {
-    setAppliedFilters({ activeBrand, query });
+  if (
+    appliedFilters.activeBrand !== activeBrand ||
+    appliedFilters.activeSubcategory !== activeSubcategory ||
+    appliedFilters.query !== query
+  ) {
+    setAppliedFilters({ activeBrand, activeSubcategory, query });
     setPage(0);
   }
 
@@ -39,34 +51,50 @@ export default function CatalogGrid() {
 
   return (
     <div>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setActiveBrand("todos")}
+          className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+            activeBrand === "todos"
+              ? "bg-ink text-cream"
+              : "bg-white text-ink-soft hover:text-rose-deep"
+          }`}
+        >
+          Todas las marcas
+        </button>
+        {categories.map((category) => (
           <button
+            key={category.slug}
             type="button"
-            onClick={() => setActiveBrand("todos")}
+            onClick={() => setActiveBrand(category.slug)}
             className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-              activeBrand === "todos"
+              activeBrand === category.slug
                 ? "bg-ink text-cream"
                 : "bg-white text-ink-soft hover:text-rose-deep"
             }`}
           >
-            Todas las marcas
+            {category.name}
           </button>
-          {categories.map((category) => (
-            <button
-              key={category.slug}
-              type="button"
-              onClick={() => setActiveBrand(category.slug)}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                activeBrand === category.slug
-                  ? "bg-ink text-cream"
-                  : "bg-white text-ink-soft hover:text-rose-deep"
-              }`}
-            >
-              {category.name}
-            </button>
-          ))}
-        </div>
+        ))}
+      </div>
+
+      <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <label className="flex items-center gap-2 text-sm text-ink-soft">
+          Subcategoría
+          <select
+            value={activeSubcategory}
+            onChange={(event) => setActiveSubcategory(event.target.value)}
+            className="rounded-full border border-rose-light/60 bg-white px-4 py-2 text-sm text-ink focus:border-rose-deep focus:outline-none"
+          >
+            <option value="todas">Todas</option>
+            {subcategories.map((subcategory) => (
+              <option key={subcategory.slug} value={subcategory.slug}>
+                {subcategory.name}
+              </option>
+            ))}
+          </select>
+        </label>
         <input
           type="search"
           value={query}
