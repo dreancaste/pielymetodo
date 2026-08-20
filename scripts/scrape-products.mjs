@@ -139,7 +139,19 @@ async function main() {
   const page = await context.newPage();
   page.setDefaultTimeout(25000);
 
-  await page.goto("https://www.cosmetologasargentinas.com/iniciar-sesion", { waitUntil: "domcontentloaded" });
+  const loginResponse = await page.goto("https://www.cosmetologasargentinas.com/iniciar-sesion", { waitUntil: "domcontentloaded" });
+
+  if (process.env.SCRAPE_DEBUG) {
+    const emailCount = await page.locator('input[type="email"], input[name*="mail" i]').count();
+    const bodySnippet = await page.locator("body").innerText().then((t) => t.slice(0, 500)).catch(() => "<could not read body>");
+    console.log("DEBUG status:", loginResponse ? loginResponse.status() : "no response object");
+    console.log("DEBUG final URL:", page.url());
+    console.log("DEBUG title:", await page.title());
+    console.log("DEBUG email input count:", emailCount);
+    console.log("DEBUG headers:", JSON.stringify(loginResponse ? loginResponse.headers() : {}));
+    console.log("DEBUG body snippet:", bodySnippet);
+  }
+
   await page.locator('input[type="email"], input[name*="mail" i]').first().fill(EMAIL);
   await page.locator('input[type="password"]').first().fill(PASSWORD);
   await Promise.all([

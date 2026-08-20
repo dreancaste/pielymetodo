@@ -28,6 +28,7 @@ jobs:
         env:
           SITE_EMAIL: ${{ secrets.SITE_EMAIL }}
           SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
+          SCRAPE_DEBUG: "1"
         run: npm run scrape-products
 
       - name: Commit and push if prices changed
