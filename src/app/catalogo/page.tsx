@@ -5,7 +5,7 @@ import CatalogGrid from "@/components/CatalogGrid";
 export const metadata: Metadata = {
   title: "Catálogo | Piel y Método",
   description:
-    "Explorá nuestro catálogo de cuidado facial profesional de Idraet, Lidherma, Icono y Dermassy.",
+    "Explorá el catálogo de cuidado facial profesional de Idraet, Lidherma, Icono y Dermassy.",
 };
 
 export default function CatalogoPage() {
@@ -16,7 +16,7 @@ export default function CatalogoPage() {
           Catálogo
         </span>
         <h1 className="mt-3 font-serif text-3xl text-ink sm:text-4xl">
-          Nuestros productos
+          Productos disponibles
         </h1>
         <p className="mt-3 text-sm text-ink-soft">
           Filtrá por marca o buscá el producto que estás buscando.

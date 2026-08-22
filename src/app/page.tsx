@@ -14,10 +14,6 @@ const benefits = [
       "Fórmulas desarrolladas con activos profesionales y materias primas seleccionadas.",
   },
   {
-    title: "Sin testeo en animales",
-    description: "Toda nuestra línea es cruelty-free, de principio a fin.",
-  },
-  {
     title: "Asesoramiento personalizado",
     description:
       "Te ayudamos a elegir el producto ideal según tu tipo de piel.",

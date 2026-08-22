@@ -44,8 +44,7 @@ export default function Footer() {
             Contacto
           </h4>
           <ul className="mt-3 space-y-2 text-sm text-ink-soft">
-            <li>hola@pielymetodo.com</li>
-            <li>Lunes a Viernes, 9 a 18 hs</li>
+            <li></li>
           </ul>
         </div>
       </div>

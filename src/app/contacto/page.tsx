@@ -4,7 +4,7 @@ import ContactForm from "@/components/ContactForm";
 export const metadata: Metadata = {
   title: "Contacto | Piel y Método",
   description:
-    "Contactanos para consultas sobre nuestros productos cosmetológicos o para recibir asesoramiento personalizado.",
+    "Contactanos para consultas sobre productos cosmetológicos o para recibir asesoramiento personalizado.",
 };
 
 const info = [
@@ -24,8 +24,7 @@ export default function ContactoPage() {
           Hablemos de tu piel
         </h1>
         <p className="mt-3 text-sm text-ink-soft">
-          ¿Tenés dudas sobre qué producto elegir o querés hacer un pedido
-          mayorista? Escribinos y te respondemos a la brevedad.
+          ¿Tenés dudas sobre qué producto elegir? Escribime y te respondo a la brevedad.
         </p>
       </div>
 
