@@ -74,6 +74,47 @@ export default function Home() {
       </section>
 
       <section className="mx-auto max-w-6xl px-6 py-16">
+        <div className="grid gap-8 rounded-3xl border border-rose-light/60 bg-white p-8 sm:grid-cols-2 sm:p-12">
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-widest text-rose-deep">
+              Envíos y entregas
+            </span>
+            <h2 className="mt-3 font-serif text-2xl text-ink sm:text-3xl">
+              ¿Cómo recibís tu pedido?
+            </h2>
+            <p className="mt-4 text-sm leading-relaxed text-ink-soft">
+              Coordinamos la entrega de dos formas: en un{" "}
+              <strong className="text-ink">punto de encuentro</strong> en
+              estaciones de la Línea Roca (Constitución o Palermo), o por{" "}
+              <strong className="text-ink">envío a coordinar</strong> a tu
+              domicilio. El día y horario se acuerdan por WhatsApp después de
+              tu compra.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-2xl bg-cream-soft/70 p-5">
+              <h3 className="font-serif text-lg text-ink">
+                Punto de encuentro
+              </h3>
+              <p className="mt-2 text-sm text-ink-soft">
+                Estaciones de la Línea Roca: Constitución o Palermo.
+                Coordinamos día y horario por WhatsApp.
+              </p>
+            </div>
+            <div className="rounded-2xl bg-cream-soft/70 p-5">
+              <h3 className="font-serif text-lg text-ink">
+                Envío a domicilio
+              </h3>
+              <p className="mt-2 text-sm text-ink-soft">
+                A coordinar según tu zona. Te contactamos para confirmar
+                costo y tiempo de entrega.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 py-16">
         <div className="flex items-end justify-between">
           <h2 className="font-serif text-2xl text-ink sm:text-3xl">
             Marcas

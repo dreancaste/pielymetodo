@@ -17,7 +17,7 @@ const body = Inter({
 export const metadata: Metadata = {
   title: "Piel y Método | Cuidado facial profesional",
   description:
-    "Descubrí nuestra línea de cuidado facial profesional: Idraet, Lidherma, Icono y Dermassy.",
+    "Cuidado facial profesional: Idraet, Lidherma, Icono y Dermassy. Entrega en punto de encuentro (Línea Roca: Constitución o Palermo) o envío a coordinar.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

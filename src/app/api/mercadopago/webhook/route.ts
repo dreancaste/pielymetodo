@@ -24,6 +24,7 @@ function buildWhatsAppMessage(payment: MercadoPagoPayment) {
     "",
     `Cliente: ${meta.customer_name || "-"}`,
     `Teléfono: ${meta.customer_phone || "-"}`,
+    `Entrega: ${meta.delivery_method || "-"}`,
     meta.customer_email ? `Email: ${meta.customer_email}` : null,
     meta.customer_note ? `Nota: ${meta.customer_note}` : null,
     "",

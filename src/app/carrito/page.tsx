@@ -12,12 +12,25 @@ export default function CarritoPage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [note, setNote] = useState("");
+  const [deliveryMethod, setDeliveryMethod] = useState<"punto" | "envio" | "">("");
+  const [station, setStation] = useState<"Constitución" | "Palermo" | "">("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleCheckout(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+
+    if (deliveryMethod === "punto" && !station) {
+      setError("Elegí en qué estación te queda mejor encontrarnos.");
+      return;
+    }
+
+    const delivery =
+      deliveryMethod === "punto"
+        ? `Punto de encuentro: estación ${station} (Línea Roca)`
+        : "Envío a domicilio a coordinar";
+
     setSubmitting(true);
     try {
       const res = await fetch("/api/checkout", {
@@ -25,7 +38,7 @@ export default function CarritoPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           items: items.map((i) => ({ id: i.id, quantity: i.quantity })),
-          customer: { name, phone, email, note },
+          customer: { name, phone, email, note, delivery },
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -184,6 +197,54 @@ export default function CarritoPage() {
                 className="mt-1.5 w-full rounded-lg border border-rose-light/60 px-3 py-2 text-sm text-ink focus:border-rose-deep focus:outline-none"
                 placeholder="Dirección de entrega, horario, etc."
               />
+            </div>
+
+            <div className="rounded-xl border border-rose-light/60 bg-cream-soft/60 p-4">
+              <p className="text-sm font-medium text-ink">Método de entrega</p>
+              <p className="mt-1 text-xs text-ink-soft">
+                Retirás en un punto de encuentro en estaciones de la Línea
+                Roca (Constitución o Palermo) o coordinamos el envío a tu
+                domicilio. Elegí una opción antes de pagar.
+              </p>
+
+              <div className="mt-3 space-y-2">
+                <label className="flex items-start gap-2 text-sm text-ink">
+                  <input
+                    type="radio"
+                    name="delivery-method"
+                    required
+                    checked={deliveryMethod === "punto"}
+                    onChange={() => setDeliveryMethod("punto")}
+                    className="mt-0.5"
+                  />
+                  Punto de encuentro (Constitución o Palermo)
+                </label>
+                {deliveryMethod === "punto" && (
+                  <select
+                    value={station}
+                    onChange={(e) =>
+                      setStation(e.target.value as "Constitución" | "Palermo" | "")
+                    }
+                    required
+                    className="ml-6 rounded-lg border border-rose-light/60 px-3 py-1.5 text-sm text-ink focus:border-rose-deep focus:outline-none"
+                  >
+                    <option value="">Elegí la estación</option>
+                    <option value="Constitución">Estación Constitución</option>
+                    <option value="Palermo">Estación Palermo</option>
+                  </select>
+                )}
+                <label className="flex items-start gap-2 text-sm text-ink">
+                  <input
+                    type="radio"
+                    name="delivery-method"
+                    required
+                    checked={deliveryMethod === "envio"}
+                    onChange={() => setDeliveryMethod("envio")}
+                    className="mt-0.5"
+                  />
+                  Envío a domicilio (a coordinar)
+                </label>
+              </div>
             </div>
 
             {error && <p className="text-sm text-rose-deep">{error}</p>}

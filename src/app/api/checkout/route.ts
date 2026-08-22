@@ -7,6 +7,7 @@ type CheckoutCustomer = {
   phone: string;
   email?: string;
   note?: string;
+  delivery: string;
 };
 type CheckoutBody = {
   items?: CheckoutItem[];
@@ -33,6 +34,12 @@ export async function POST(request: Request) {
   if (!customer?.name?.trim() || !customer?.phone?.trim()) {
     return NextResponse.json(
       { error: "Faltan tus datos de contacto." },
+      { status: 400 }
+    );
+  }
+  if (!customer.delivery?.trim()) {
+    return NextResponse.json(
+      { error: "Elegí un método de entrega." },
       { status: 400 }
     );
   }
@@ -76,6 +83,7 @@ export async function POST(request: Request) {
       customer_phone: customer.phone,
       customer_email: customer.email?.trim() || "",
       customer_note: customer.note?.trim() || "",
+      delivery_method: customer.delivery,
       items_summary: itemsSummary,
     },
     back_urls: {
