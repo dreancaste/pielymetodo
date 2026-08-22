@@ -1,0 +1,203 @@
+"use client";
+
+import { useState, type FormEvent } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useCart } from "@/lib/cart-context";
+import { formatPrice } from "@/data/products";
+
+export default function CarritoPage() {
+  const { items, removeItem, setQuantity, totalPrice } = useCart();
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [note, setNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleCheckout(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: items.map((i) => ({ id: i.id, quantity: i.quantity })),
+          customer: { name, phone, email, note },
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.initPoint) {
+        throw new Error(data.error || "No pudimos iniciar el pago. Probá de nuevo.");
+      }
+      window.location.href = data.initPoint;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error inesperado.");
+      setSubmitting(false);
+    }
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="mx-auto max-w-2xl px-6 py-24 text-center">
+        <h1 className="font-serif text-3xl text-ink">Tu carrito está vacío</h1>
+        <p className="mt-3 text-sm text-ink-soft">
+          Agregá productos desde el catálogo para armar tu pedido.
+        </p>
+        <Link
+          href="/catalogo"
+          className="mt-6 inline-block rounded-full bg-ink px-6 py-3 text-sm font-medium text-cream transition hover:bg-rose-deep"
+        >
+          Ver catálogo
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-5xl px-6 py-16">
+      <h1 className="font-serif text-3xl text-ink sm:text-4xl">Tu carrito</h1>
+
+      <div className="mt-10 grid gap-10 lg:grid-cols-5">
+        <div className="space-y-4 lg:col-span-3">
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="flex gap-4 rounded-2xl border border-rose-light/60 bg-white p-4"
+            >
+              <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-cream-soft">
+                <Image
+                  src={item.image}
+                  alt={item.name}
+                  fill
+                  sizes="80px"
+                  className="object-contain p-2"
+                />
+              </div>
+              <div className="flex flex-1 flex-col justify-between">
+                <div className="flex items-start justify-between gap-4">
+                  <h3 className="font-serif text-sm leading-snug text-ink">
+                    {item.name}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => removeItem(item.id)}
+                    className="text-xs text-ink-soft transition hover:text-rose-deep"
+                  >
+                    Quitar
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setQuantity(item.id, item.quantity - 1)}
+                      className="flex h-7 w-7 items-center justify-center rounded-full border border-ink/20 text-ink transition hover:border-rose-deep hover:text-rose-deep"
+                      aria-label="Restar"
+                    >
+                      −
+                    </button>
+                    <span className="w-6 text-center text-sm text-ink">
+                      {item.quantity}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setQuantity(item.id, item.quantity + 1)}
+                      className="flex h-7 w-7 items-center justify-center rounded-full border border-ink/20 text-ink transition hover:border-rose-deep hover:text-rose-deep"
+                      aria-label="Sumar"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <span className="text-sm font-semibold text-rose-deep">
+                    {formatPrice(item.price * item.quantity)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="lg:col-span-2">
+          <form
+            onSubmit={handleCheckout}
+            className="space-y-4 rounded-2xl border border-rose-light/60 bg-white p-6"
+          >
+            <div className="flex items-center justify-between border-b border-rose-light/60 pb-4">
+              <span className="text-sm font-medium text-ink-soft">Total</span>
+              <span className="font-serif text-2xl text-rose-deep">
+                {formatPrice(totalPrice)}
+              </span>
+            </div>
+
+            <div>
+              <label htmlFor="name" className="text-sm font-medium text-ink">
+                Nombre y apellido
+              </label>
+              <input
+                id="name"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="mt-1.5 w-full rounded-lg border border-rose-light/60 px-3 py-2 text-sm text-ink focus:border-rose-deep focus:outline-none"
+                placeholder="Tu nombre"
+              />
+            </div>
+            <div>
+              <label htmlFor="phone" className="text-sm font-medium text-ink">
+                Teléfono / WhatsApp
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="mt-1.5 w-full rounded-lg border border-rose-light/60 px-3 py-2 text-sm text-ink focus:border-rose-deep focus:outline-none"
+                placeholder="11 1234 5678"
+              />
+            </div>
+            <div>
+              <label htmlFor="email" className="text-sm font-medium text-ink">
+                Email (opcional)
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="mt-1.5 w-full rounded-lg border border-rose-light/60 px-3 py-2 text-sm text-ink focus:border-rose-deep focus:outline-none"
+                placeholder="tu@email.com"
+              />
+            </div>
+            <div>
+              <label htmlFor="note" className="text-sm font-medium text-ink">
+                Nota para tu pedido (opcional)
+              </label>
+              <textarea
+                id="note"
+                rows={2}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                className="mt-1.5 w-full rounded-lg border border-rose-light/60 px-3 py-2 text-sm text-ink focus:border-rose-deep focus:outline-none"
+                placeholder="Dirección de entrega, horario, etc."
+              />
+            </div>
+
+            {error && <p className="text-sm text-rose-deep">{error}</p>}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full rounded-full bg-ink px-6 py-3 text-sm font-medium text-cream transition hover:bg-rose-deep disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {submitting ? "Redirigiendo a Mercado Pago…" : "Pagar con Mercado Pago"}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useCart } from "@/lib/cart-context";
 
 const links = [
   { href: "/", label: "Inicio" },
@@ -7,6 +10,8 @@ const links = [
 ];
 
 export default function Navbar() {
+  const { totalItems } = useCart();
+
   return (
     <header className="sticky top-0 z-50 border-b border-rose-light/60 bg-cream/90 backdrop-blur">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
@@ -44,12 +49,37 @@ export default function Navbar() {
             </li>
           ))}
         </ul>
-        <Link
-          href="/catalogo"
-          className="hidden rounded-full bg-ink px-5 py-2 text-sm font-medium text-cream transition hover:bg-rose-deep sm:inline-block"
-        >
-          Ver productos
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/carrito"
+            className="relative flex h-10 w-10 items-center justify-center rounded-full border border-ink/15 text-ink transition hover:border-rose-deep hover:text-rose-deep"
+            aria-label="Ver carrito"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              className="h-5 w-5"
+              aria-hidden="true"
+            >
+              <path d="M3 4h2l1.6 10.6a2 2 0 0 0 2 1.7h7.7a2 2 0 0 0 2-1.6L20 8H6" />
+              <circle cx="9.5" cy="20" r="1.2" fill="currentColor" stroke="none" />
+              <circle cx="17" cy="20" r="1.2" fill="currentColor" stroke="none" />
+            </svg>
+            {totalItems > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-deep px-1 text-[11px] font-semibold text-cream">
+                {totalItems}
+              </span>
+            )}
+          </Link>
+          <Link
+            href="/catalogo"
+            className="hidden rounded-full bg-ink px-5 py-2 text-sm font-medium text-cream transition hover:bg-rose-deep sm:inline-block"
+          >
+            Ver productos
+          </Link>
+        </div>
       </nav>
     </header>
   );

@@ -1,10 +1,27 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 import type { Product } from "@/data/products";
 import { categories, formatPrice } from "@/data/products";
+import { useCart } from "@/lib/cart-context";
 
 export default function ProductCard({ product }: { product: Product }) {
+  const { addItem } = useCart();
+  const [added, setAdded] = useState(false);
   const brandName =
     categories.find((c) => c.slug === product.brand)?.name ?? product.brand;
+
+  function handleAdd() {
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+    });
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
+  }
 
   return (
     <div className="group flex flex-col overflow-hidden rounded-2xl border border-rose-light/60 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
@@ -42,9 +59,14 @@ export default function ProductCard({ product }: { product: Product }) {
           </div>
           <button
             type="button"
-            className="rounded-full bg-ink px-4 py-2 text-sm font-medium text-cream transition hover:bg-rose-deep"
+            onClick={handleAdd}
+            className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+              added
+                ? "bg-sage-deep text-cream"
+                : "bg-ink text-cream hover:bg-rose-deep"
+            }`}
           >
-            Consultar
+            {added ? "Agregado ✓" : "Agregar"}
           </button>
         </div>
       </div>
