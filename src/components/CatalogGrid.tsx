@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ProductCard from "@/components/ProductCard";
-import { categories, subcategories, products } from "@/data/products";
+import { categories, products } from "@/data/products";
 
 const DIACRITICS = /[̀-ͯ]/g;
 const PAGE_SIZE = 10;
@@ -14,35 +14,39 @@ function normalize(value: string) {
 
 export default function CatalogGrid() {
   const searchParams = useSearchParams();
-  const initialBrand = searchParams.get("marca") ?? "todos";
-  const initialSubcategory = searchParams.get("subcategoria") ?? "todas";
+  const initialCategory = searchParams.get("categoria") ?? "todas";
+  const initialBrand = searchParams.get("marca") ?? "todas";
+  const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [activeBrand, setActiveBrand] = useState(initialBrand);
-  const [activeSubcategory, setActiveSubcategory] = useState(initialSubcategory);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(0);
   const [appliedFilters, setAppliedFilters] = useState({
+    activeCategory,
     activeBrand,
-    activeSubcategory,
     query,
   });
+
+  const brands = useMemo(
+    () => [...new Set(products.map((product) => product.brand))].sort((a, b) => a.localeCompare(b)),
+    []
+  );
 
   const filtered = useMemo(() => {
     const normalizedQuery = normalize(query);
     return products.filter((product) => {
-      const matchesBrand = activeBrand === "todos" || product.brand === activeBrand;
-      const matchesSubcategory =
-        activeSubcategory === "todas" || product.subcategory === activeSubcategory;
+      const matchesCategory = activeCategory === "todas" || product.category === activeCategory;
+      const matchesBrand = activeBrand === "todas" || product.brand === activeBrand;
       const matchesQuery = normalize(product.name).includes(normalizedQuery);
-      return matchesBrand && matchesSubcategory && matchesQuery;
+      return matchesCategory && matchesBrand && matchesQuery;
     });
-  }, [activeBrand, activeSubcategory, query]);
+  }, [activeCategory, activeBrand, query]);
 
   if (
+    appliedFilters.activeCategory !== activeCategory ||
     appliedFilters.activeBrand !== activeBrand ||
-    appliedFilters.activeSubcategory !== activeSubcategory ||
     appliedFilters.query !== query
   ) {
-    setAppliedFilters({ activeBrand, activeSubcategory, query });
+    setAppliedFilters({ activeCategory, activeBrand, query });
     setPage(0);
   }
 
@@ -54,22 +58,22 @@ export default function CatalogGrid() {
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={() => setActiveBrand("todos")}
+          onClick={() => setActiveCategory("todas")}
           className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-            activeBrand === "todos"
+            activeCategory === "todas"
               ? "bg-ink text-cream"
               : "bg-white text-ink-soft hover:text-rose-deep"
           }`}
         >
-          Todas las marcas
+          Todas las categorías
         </button>
         {categories.map((category) => (
           <button
             key={category.slug}
             type="button"
-            onClick={() => setActiveBrand(category.slug)}
+            onClick={() => setActiveCategory(category.slug)}
             className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-              activeBrand === category.slug
+              activeCategory === category.slug
                 ? "bg-ink text-cream"
                 : "bg-white text-ink-soft hover:text-rose-deep"
             }`}
@@ -81,16 +85,16 @@ export default function CatalogGrid() {
 
       <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <label className="flex items-center gap-2 text-sm text-ink-soft">
-          Subcategoría
+          Marca
           <select
-            value={activeSubcategory}
-            onChange={(event) => setActiveSubcategory(event.target.value)}
+            value={activeBrand}
+            onChange={(event) => setActiveBrand(event.target.value)}
             className="rounded-full border border-rose-light/60 bg-white px-4 py-2 text-sm text-ink focus:border-rose-deep focus:outline-none"
           >
             <option value="todas">Todas</option>
-            {subcategories.map((subcategory) => (
-              <option key={subcategory.slug} value={subcategory.slug}>
-                {subcategory.name}
+            {brands.map((brand) => (
+              <option key={brand} value={brand}>
+                {brand}
               </option>
             ))}
           </select>

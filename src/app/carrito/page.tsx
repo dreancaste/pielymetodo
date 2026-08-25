@@ -6,18 +6,26 @@ import Link from "next/link";
 import { useCart } from "@/lib/cart-context";
 import { formatPrice } from "@/data/products";
 
+const CONTACT_PHONE = process.env.NEXT_PUBLIC_CONTACT_PHONE;
+
+type OrderResult = {
+  total: number;
+  alias: string;
+  holder: string | null;
+};
+
 export default function CarritoPage() {
-  const { items, removeItem, setQuantity, totalPrice } = useCart();
+  const { items, removeItem, setQuantity, totalPrice, clear } = useCart();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
   const [note, setNote] = useState("");
   const [deliveryMethod, setDeliveryMethod] = useState<"punto" | "envio" | "">("");
   const [station, setStation] = useState<"Constitución" | "Palermo" | "">("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [order, setOrder] = useState<OrderResult | null>(null);
 
-  async function handleCheckout(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmitOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
 
@@ -33,23 +41,92 @@ export default function CarritoPage() {
 
     setSubmitting(true);
     try {
-      const res = await fetch("/api/checkout", {
+      const res = await fetch("/api/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           items: items.map((i) => ({ id: i.id, quantity: i.quantity })),
-          customer: { name, phone, email, note, delivery },
+          customer: { name, phone, note, delivery },
         }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.initPoint) {
-        throw new Error(data.error || "No pudimos iniciar el pago. Probá de nuevo.");
+      if (!res.ok) {
+        throw new Error(data.error || "No pudimos enviar tu pedido. Probá de nuevo.");
       }
-      window.location.href = data.initPoint;
+      setOrder(data as OrderResult);
+      clear();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado.");
+    } finally {
       setSubmitting(false);
     }
+  }
+
+  if (order) {
+    const whatsappText = encodeURIComponent(
+      `Hola! Te paso el comprobante de mi transferencia de ${formatPrice(order.total)} para mi pedido en Piel y Método.`
+    );
+    return (
+      <div className="mx-auto max-w-lg px-6 py-24 text-center">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-sage/15 text-sage-deep">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-7 w-7">
+            <path d="M5 12.5 10 17 19 7" />
+          </svg>
+        </div>
+        <h1 className="mt-6 font-serif text-2xl text-ink sm:text-3xl">
+          ¡Pedido enviado!
+        </h1>
+        <p className="mt-3 text-sm text-ink-soft">
+          Ya recibimos el detalle de tu pedido. Para confirmarlo, transferí el
+          total y envianos el comprobante.
+        </p>
+
+        <div className="mt-6 rounded-2xl border border-rose-light/60 bg-white p-6 text-left">
+          <div className="flex items-center justify-between border-b border-rose-light/60 pb-3">
+            <span className="text-sm font-medium text-ink-soft">
+              Total a transferir
+            </span>
+            <span className="font-serif text-xl text-rose-deep">
+              {formatPrice(order.total)}
+            </span>
+          </div>
+          <div className="mt-3">
+            <span className="text-sm font-medium text-ink-soft">
+              Alias para transferir
+            </span>
+            <p className="mt-1 font-serif text-lg text-ink">{order.alias}</p>
+            {order.holder && (
+              <p className="text-sm text-ink-soft">Titular: {order.holder}</p>
+            )}
+          </div>
+        </div>
+
+        <p className="mt-6 text-sm text-ink-soft">
+          Una vez que transferís, mandanos el comprobante de pago por
+          WhatsApp para coordinar la entrega.
+        </p>
+
+        {CONTACT_PHONE && (
+          <a
+            href={`https://wa.me/${CONTACT_PHONE}?text=${whatsappText}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-6 inline-block rounded-full bg-ink px-6 py-3 text-sm font-medium text-cream transition hover:bg-rose-deep"
+          >
+            Enviar comprobante por WhatsApp
+          </a>
+        )}
+
+        <div className="mt-4">
+          <Link
+            href="/"
+            className="text-sm font-medium text-ink-soft transition hover:text-rose-deep"
+          >
+            Volver al inicio
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   if (items.length === 0) {
@@ -135,7 +212,7 @@ export default function CarritoPage() {
 
         <div className="lg:col-span-2">
           <form
-            onSubmit={handleCheckout}
+            onSubmit={handleSubmitOrder}
             className="space-y-4 rounded-2xl border border-rose-light/60 bg-white p-6"
           >
             <div className="flex items-center justify-between border-b border-rose-light/60 pb-4">
@@ -173,19 +250,6 @@ export default function CarritoPage() {
               />
             </div>
             <div>
-              <label htmlFor="email" className="text-sm font-medium text-ink">
-                Email (opcional)
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-rose-light/60 px-3 py-2 text-sm text-ink focus:border-rose-deep focus:outline-none"
-                placeholder="tu@email.com"
-              />
-            </div>
-            <div>
               <label htmlFor="note" className="text-sm font-medium text-ink">
                 Nota para tu pedido (opcional)
               </label>
@@ -204,7 +268,7 @@ export default function CarritoPage() {
               <p className="mt-1 text-xs text-ink-soft">
                 Retirás en un punto de encuentro en estaciones de la Línea
                 Roca (Constitución o Palermo) o coordinamos el envío a tu
-                domicilio. Elegí una opción antes de pagar.
+                domicilio. Elegí una opción antes de enviar tu pedido.
               </p>
 
               <div className="mt-3 space-y-2">
@@ -254,7 +318,7 @@ export default function CarritoPage() {
               disabled={submitting}
               className="w-full rounded-full bg-ink px-6 py-3 text-sm font-medium text-cream transition hover:bg-rose-deep disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {submitting ? "Redirigiendo a Mercado Pago…" : "Pagar con Mercado Pago"}
+              {submitting ? "Enviando pedido…" : "Enviar pedido"}
             </button>
           </form>
         </div>

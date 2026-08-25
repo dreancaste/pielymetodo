@@ -73,41 +73,74 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 py-16">
-        <div className="grid gap-8 rounded-3xl border border-rose-light/60 bg-white p-8 sm:grid-cols-2 sm:p-12">
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-widest text-rose-deep">
-              Envíos y entregas
-            </span>
-            <h2 className="mt-3 font-serif text-2xl text-ink sm:text-3xl">
-              ¿Cómo recibís tu pedido?
-            </h2>
-            <p className="mt-4 text-sm leading-relaxed text-ink-soft">
-              Coordinamos la entrega de dos formas: en un{" "}
-              <strong className="text-ink">punto de encuentro</strong> en
-              estaciones de la Línea Roca (Constitución o Palermo), o por{" "}
-              <strong className="text-ink">envío a coordinar</strong> a tu
-              domicilio. El día y horario se acuerdan por WhatsApp después de
-              tu compra.
-            </p>
+      <section id="como-comprar" className="mx-auto max-w-6xl px-6 py-16">
+        <div className="rounded-3xl border border-rose-light/60 bg-white p-8 sm:p-12">
+          <span className="text-xs font-semibold uppercase tracking-widest text-rose-deep">
+            Cómo comprar
+          </span>
+          <h2 className="mt-3 font-serif text-2xl text-ink sm:text-3xl">
+            De tu pantalla a tu casa, en tres pasos
+          </h2>
+
+          <div className="mt-8 grid gap-6 sm:grid-cols-3">
+            {[
+              {
+                step: "1",
+                title: "Elegí tus productos",
+                description:
+                  "Navegá el catálogo y agregá al carrito lo que quieras comprar.",
+              },
+              {
+                step: "2",
+                title: "Transferís el total",
+                description:
+                  "Te enviamos el monto final y nuestro alias bancario para que hagas la transferencia.",
+              },
+              {
+                step: "3",
+                title: "Nos mandás el comprobante",
+                description:
+                  "Con el comprobante de pago por WhatsApp, coordinamos día, horario y forma de entrega.",
+              },
+            ].map((item) => (
+              <div key={item.step} className="rounded-2xl bg-cream-soft/70 p-5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-ink text-sm font-semibold text-cream">
+                  {item.step}
+                </span>
+                <h3 className="mt-3 font-serif text-lg text-ink">
+                  {item.title}
+                </h3>
+                <p className="mt-2 text-sm text-ink-soft">
+                  {item.description}
+                </p>
+              </div>
+            ))}
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl bg-cream-soft/70 p-5">
+
+          <div className="mt-8 grid gap-8 border-t border-rose-light/60 pt-8 sm:grid-cols-2">
+            <div>
               <h3 className="font-serif text-lg text-ink">
-                Punto de encuentro
+                Formas de entrega
               </h3>
-              <p className="mt-2 text-sm text-ink-soft">
-                Estaciones de la Línea Roca: Constitución o Palermo.
-                Coordinamos día y horario por WhatsApp.
+              <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+                En{" "}
+                <strong className="text-ink">punto de encuentro</strong> en
+                estaciones de la Línea Roca (Constitución o Palermo), o por{" "}
+                <strong className="text-ink">envío a coordinar</strong> a tu
+                domicilio. Siempre se acuerda con vos por WhatsApp después de
+                la compra.
               </p>
             </div>
-            <div className="rounded-2xl bg-cream-soft/70 p-5">
+            <div>
               <h3 className="font-serif text-lg text-ink">
-                Envío a domicilio
+                Entrega inmediata y a pedido
               </h3>
-              <p className="mt-2 text-sm text-ink-soft">
-                A coordinar según tu zona. Te contactamos para confirmar
-                costo y tiempo de entrega.
+              <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+                Algunos productos están en stock y se entregan enseguida.
+                Otros son{" "}
+                <strong className="text-ink">a pedido</strong> y tienen un
+                pequeño tiempo de espera. En ambos casos te confirmamos la
+                disponibilidad y el plazo por WhatsApp al recibir tu pedido.
               </p>
             </div>
           </div>
@@ -117,7 +150,7 @@ export default function Home() {
       <section className="mx-auto max-w-6xl px-6 py-16">
         <div className="flex items-end justify-between">
           <h2 className="font-serif text-2xl text-ink sm:text-3xl">
-            Marcas
+            Categorías
           </h2>
           <Link
             href="/catalogo"
@@ -130,15 +163,12 @@ export default function Home() {
           {categories.map((category) => (
             <Link
               key={category.slug}
-              href={`/catalogo?marca=${category.slug}`}
+              href={`/catalogo?categoria=${category.slug}`}
               className="group rounded-2xl border border-rose-light/60 bg-white p-5 transition hover:-translate-y-1 hover:shadow-md"
             >
               <h3 className="font-serif text-lg text-ink group-hover:text-rose-deep">
                 {category.name}
               </h3>
-              <p className="mt-2 text-sm text-ink-soft">
-                {category.description}
-              </p>
             </Link>
           ))}
         </div>

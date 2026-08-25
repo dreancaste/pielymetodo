@@ -3,14 +3,12 @@
 import { useState } from "react";
 import Image from "next/image";
 import type { Product } from "@/data/products";
-import { categories, formatPrice } from "@/data/products";
+import { formatPrice } from "@/data/products";
 import { useCart } from "@/lib/cart-context";
 
 export default function ProductCard({ product }: { product: Product }) {
   const { addItem } = useCart();
   const [added, setAdded] = useState(false);
-  const brandName =
-    categories.find((c) => c.slug === product.brand)?.name ?? product.brand;
 
   function handleAdd() {
     addItem({
@@ -41,7 +39,7 @@ export default function ProductCard({ product }: { product: Product }) {
       </div>
       <div className="flex flex-1 flex-col gap-2 p-5">
         <span className="text-xs font-medium uppercase tracking-wide text-sage-deep">
-          {brandName}
+          {product.brand}
         </span>
         <h3 className="font-serif text-base leading-snug text-ink">
           {product.name}
