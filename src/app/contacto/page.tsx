@@ -8,9 +8,9 @@ export const metadata: Metadata = {
 };
 
 const info = [
-  { label: "Email", value: "hola@pielymetodo.com" },
-  { label: "Teléfono", value: "+54 11 5555-0123" },
-  { label: "Ubicación", value: "Buenos Aires, Argentina" },
+  { label: "Email", value: "pielymetodo@gmail.com" },
+  { label: "Teléfono", value: "+54 11 2852-8896" },
+  { label: "Ubicación", value: "Florencio Varela, Buenos Aires" },
 ];
 
 export default function ContactoPage() {

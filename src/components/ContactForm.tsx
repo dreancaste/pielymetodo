@@ -4,10 +4,40 @@ import { useState, type FormEvent } from "react";
 
 export default function ContactForm() {
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSubmitted(true);
+    setError(null);
+    setSending(true);
+
+    const form = event.currentTarget;
+    const data = new FormData(form);
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombre: data.get("nombre"),
+          email: data.get("email"),
+          asunto: data.get("asunto"),
+          mensaje: data.get("mensaje"),
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || "No se pudo enviar el mensaje.");
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo enviar el mensaje.");
+    } finally {
+      setSending(false);
+    }
   }
 
   if (submitted) {
@@ -91,11 +121,13 @@ export default function ContactForm() {
           placeholder="Contanos qué estás buscando"
         />
       </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
       <button
         type="submit"
-        className="w-full rounded-full bg-ink px-6 py-3 text-sm font-medium text-cream transition hover:bg-rose-deep sm:w-auto"
+        disabled={sending}
+        className="w-full rounded-full bg-ink px-6 py-3 text-sm font-medium text-cream transition hover:bg-rose-deep disabled:opacity-60 sm:w-auto"
       >
-        Enviar mensaje
+        {sending ? "Enviando..." : "Enviar mensaje"}
       </button>
     </form>
   );

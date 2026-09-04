@@ -1,10 +1,3 @@
-// Refreshes src/data/products.ts with current prices/images for the curated
-// catalog (a fixed list of product pages, organized by product type).
-// Requires SITE_EMAIL and SITE_PASSWORD env vars (never hardcode credentials here).
-//
-// This script owns the curated list below. To add/remove a product from the
-// catalog, edit URLS here — do not edit products.ts by hand, it gets
-// overwritten on every run (including the daily GitHub Action).
 import { chromium } from "playwright";
 import fs from "node:fs";
 import path from "node:path";
@@ -197,7 +190,13 @@ function slugify(url) {
 }
 
 async function scrapeOne(page, url, category) {
-  await page.goto(url, { waitUntil: "domcontentloaded" });
+  try {
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+  } catch (error) {
+    console.warn(`SKIP (Timeout o error de carga): ${url}`);
+    return null;
+  }
+
   await page.waitForSelector("h1", { timeout: 15000 }).catch(() => {});
 
   const name = await page.locator("h1").first().textContent().catch(() => null);

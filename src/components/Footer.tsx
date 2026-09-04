@@ -44,7 +44,9 @@ export default function Footer() {
             Contacto
           </h4>
           <ul className="mt-3 space-y-2 text-sm text-ink-soft">
-            <li></li>
+            <li>pielymetodo@gmail.com</li>
+            <li>+54 11 2852-8896</li>
+            <li>Florencio Varela, Buenos Aires</li>
           </ul>
         </div>
       </div>
