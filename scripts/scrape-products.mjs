@@ -203,17 +203,17 @@ async function scrapeOne(page, url, category) {
   const priceText = await page
     .locator(".current-price, .product-price, [itemprop='price'], .price")
     .first()
-    .textContent()
+    .textContent({ timeout: 5000 })
     .catch(() => null);
   const regularText = await page
     .locator(".regular-price")
     .first()
-    .textContent()
+    .textContent({ timeout: 5000 })
     .catch(() => null);
   const image = await page
     .locator("#product-images img, .product-cover img, img[itemprop='image']")
     .first()
-    .getAttribute("src")
+    .getAttribute("src", { timeout: 5000 })
     .catch(() => null);
 
   if (!name || !image) {
@@ -244,7 +244,9 @@ async function scrapeOne(page, url, category) {
 }
 
 async function main() {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({
+    args: ["--disable-gpu", "--disable-dev-shm-usage", "--no-sandbox"],
+  });
   const context = await browser.newContext();
   const page = await context.newPage();
   page.setDefaultTimeout(25000);
