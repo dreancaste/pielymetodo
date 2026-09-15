@@ -6,12 +6,13 @@ import Link from "next/link";
 import { useCart } from "@/lib/cart-context";
 import { formatPrice } from "@/data/products";
 
-const CONTACT_PHONE = process.env.NEXT_PUBLIC_CONTACT_PHONE;
+const ORDER_WHATSAPP_PHONE = "5491128528896";
 
 type OrderResult = {
   total: number;
   alias: string;
   holder: string | null;
+  whatsappText: string;
 };
 
 export default function CarritoPage() {
@@ -53,8 +54,31 @@ export default function CarritoPage() {
       if (!res.ok) {
         throw new Error(data.error || "No pudimos enviar tu pedido. Probá de nuevo.");
       }
-      setOrder(data as OrderResult);
+      const whatsappText = [
+        "Hola! Quiero confirmar este pedido en Piel y Método.",
+        "",
+        `Cliente: ${name.trim()}`,
+        `Teléfono: ${phone.trim()}`,
+        `Entrega: ${delivery}`,
+        note.trim() ? `Nota: ${note.trim()}` : null,
+        "",
+        "Pedido:",
+        ...items.map(
+          (item) =>
+            `${item.quantity}x ${item.name} - ${formatPrice(item.price * item.quantity)}`
+        ),
+        "",
+        `Total: ${formatPrice(data.total)}`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+      const whatsappUrl = `https://wa.me/${ORDER_WHATSAPP_PHONE}?text=${encodeURIComponent(
+        whatsappText
+      )}`;
+
+      setOrder({ ...(data as Omit<OrderResult, "whatsappText">), whatsappText });
       clear();
+      window.location.assign(whatsappUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado.");
     } finally {
@@ -63,9 +87,6 @@ export default function CarritoPage() {
   }
 
   if (order) {
-    const whatsappText = encodeURIComponent(
-      `Hola! Te paso el comprobante de mi transferencia de ${formatPrice(order.total)} para mi pedido en Piel y Método.`
-    );
     return (
       <div className="mx-auto max-w-lg px-6 py-24 text-center">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-sage/15 text-sage-deep">
@@ -106,16 +127,16 @@ export default function CarritoPage() {
           WhatsApp para coordinar la entrega.
         </p>
 
-        {CONTACT_PHONE && (
-          <a
-            href={`https://wa.me/${CONTACT_PHONE}?text=${whatsappText}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-6 inline-block rounded-full bg-ink px-6 py-3 text-sm font-medium text-cream transition hover:bg-rose-deep"
-          >
-            Enviar comprobante por WhatsApp
-          </a>
-        )}
+        <a
+          href={`https://wa.me/${ORDER_WHATSAPP_PHONE}?text=${encodeURIComponent(
+            order.whatsappText
+          )}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-6 inline-block rounded-full bg-ink px-6 py-3 text-sm font-medium text-cream transition hover:bg-rose-deep"
+        >
+          Abrir pedido en WhatsApp
+        </a>
 
         <div className="mt-4">
           <Link
