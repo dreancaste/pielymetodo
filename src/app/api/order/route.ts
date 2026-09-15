@@ -41,12 +41,6 @@ function buildOwnerMessage(
 
 export async function POST(request: Request) {
   const alias = process.env.BANK_ALIAS;
-  if (!alias) {
-    return NextResponse.json(
-      { error: "Los pedidos todavía no están configurados." },
-      { status: 500 }
-    );
-  }
 
   const body = (await request.json().catch(() => null)) as OrderBody | null;
   if (!body || !Array.isArray(body.items) || body.items.length === 0) {
