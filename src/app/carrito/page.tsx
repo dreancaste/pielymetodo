@@ -111,7 +111,8 @@ export default function CarritoPage() {
               {formatPrice(order.total)}
             </span>
           </div>
-          <div className="mt-3">
+          {order.alias ? (
+            <div className="mt-3">
             <span className="text-sm font-medium text-ink-soft">
               Alias para transferir
             </span>
@@ -119,7 +120,12 @@ export default function CarritoPage() {
             {order.holder && (
               <p className="text-sm text-ink-soft">Titular: {order.holder}</p>
             )}
-          </div>
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-ink-soft">
+              Te enviaremos los datos para la transferencia por WhatsApp.
+            </p>
+          )}
         </div>
 
         <p className="mt-6 text-sm text-ink-soft">
