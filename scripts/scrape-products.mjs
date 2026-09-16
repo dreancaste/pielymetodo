@@ -172,10 +172,24 @@ function inferBrand(name, url) {
 
 function parseArsPrice(text) {
   if (!text) return null;
-  const cleaned = text.replace(/[^\d.,]/g, "").trim();
-  if (!cleaned) return null;
-  const normalized = cleaned.replace(/\./g, "").replace(/,/g, ".");
+
+  // 1. Buscamos un signo "$" seguido de un número (ej: "$ 10.080" o "$10.080,50")
+  const match = text.match(/\$\s*(\d{1,3}(?:\.\d{3})*(?:,\d+)?)/);
+  
+  let numStr = "";
+  if (match) {
+    numStr = match[1]; // Nos quedamos solo con el número, sin el $
+  } else {
+    // 2. Fallback: si no hay "$", tomamos el PRIMER número que encontremos
+    const fallback = text.match(/\d{1,3}(?:\.\d{3})*(?:,\d+)?/);
+    if (!fallback) return null;
+    numStr = fallback[0];
+  }
+
+  // 3. Normalizamos (quitamos puntos, cambiamos coma por punto) y convertimos
+  const normalized = numStr.replace(/\./g, "").replace(/,/g, ".");
   const value = parseFloat(normalized);
+  
   return Number.isFinite(value) ? Math.round(value) : null;
 }
 
