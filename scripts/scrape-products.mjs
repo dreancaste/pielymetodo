@@ -5,6 +5,19 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Attempt to load .env.local or .env for local development
+const envFiles = [".env.local", ".env"];
+for (const envFile of envFiles) {
+  const envPath = path.join(__dirname, "..", envFile);
+  if (fs.existsSync(envPath)) {
+    try {
+      if (typeof process.loadEnvFile === "function") {
+        process.loadEnvFile(envPath);
+      }
+    } catch (_) { }
+  }
+}
+
 const EMAIL = process.env.SITE_EMAIL;
 const PASSWORD = process.env.SITE_PASSWORD;
 
@@ -16,134 +29,16 @@ if (!EMAIL || !PASSWORD) {
 const MARKUP = 1.2;
 const MIN_EXPECTED_PRODUCTS = 80; // sanity floor so a broken scrape can't wipe the catalog
 
-const CATEGORIES = [
-  { slug: "limpieza", name: "Limpieza" },
-  { slug: "proteccion-solar", name: "Protección Solar" },
-  { slug: "serums", name: "Sérums" },
-  { slug: "tonicos", name: "Tónicos" },
-  { slug: "cremas-geles-emulsiones", name: "Cremas, Geles y Emulsiones" },
-  { slug: "contorno-de-ojos", name: "Contorno de Ojos" },
-  { slug: "otros", name: "Otros" },
-];
+// Load catalog config
+const configPath = path.join(__dirname, "catalog-urls.json");
+if (!fs.existsSync(configPath)) {
+  console.error(`Missing catalog configuration file: ${configPath}`);
+  process.exit(1);
+}
 
-const URLS = {
-  limpieza: [
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/idraet-facial/idraet-limpiadores/leche-limpiadora-suavizante-185-ml-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/idraet-facial/idraet-limpiadores/gel-limpiador-puricante-200-ml-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/idraet-facial/idraet-limpiadores/emulsion-de-limpieza-alpine-roses-100-ml-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/gel-de-limpieza-sebo-200-ml-libra.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/gel-de-limpieza-pieles-mixtas-x-200-ml-libra.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/idraet-facial/idraet-limpiadores/espuma-micelar-de-limpieza-con-vitamina-c-60-ml-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/3-en-1-micellar-water-agua-micelar-3-en-1-200-ml-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/gel-de-limpieza-pieles-sensibles-x-200-ml-libra.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/lidherma/lidherma-facial/lidherma-limpiadores/desmaquillante-de-ojos-125-ml-lidherma.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/espuma-limpiadora-mousse-cleanser-200-gr-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/icono/icono-espuma-de-limpieza-facial-fix-c-60-gr.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/aceite-de-limpieza-y-desmaquillante-100-ml-green-line-exel.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/icono/leche-limpieza-purif-220-grs-icono.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/aceite-de-limpieza-facial-biobellus-100ml.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/icono/icono-espuma-coral-60-ml.html",
-    "https://www.cosmetologasargentinas.com/promociones-mensuales/idraet-amiin-gel-de-limpieza-centella-asiatica.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/prodermic/prodermic-facial/pdm-limpiadores/biphase-clean-prodermic-desmaquillante-micelar-en-2-fases-130-ml.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/prodermic/prodermic-facial/pdm-limpiadores/agua-micelar-soft-clean-130-ml-prodermic.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/icono/gel-espuma-200-grs-vinoterapia-icono.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/exel/exel-facial/exel-limpiadores/higiene-emulsion-limpieza-c-vitamina-e-250-ml-c-valvula-exel.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/prodermic/prodermic-facial/pdm-limpiadores/lumi-clean-prodermic-gel-de-higiene-con-mandelico-150-ml.html",
-  ],
-  "proteccion-solar": [
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/idraet-facial/idraet-protectores-solares/crema-protector-solar-spf-30-sin-color-75-ml-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/protector-solar-crema-gel-spf-40-toque-seco-50-gr-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/protector-solar-spf50-sin-color-facial-amplio-espectro-100-ml-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/protector-solar-antiage-sin-color-50-ml-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/idraet-facial/idraet-protectores-solares/spray-pantalla-solar-spf-50-corporal-145-ml-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/icono/icono-facial/icono-emulsiones-y-cremas/fotoprot-emulsion-fps-40-invisible-icono.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/exel/exel-facial/exel-protectores-solares/solar-xl-sun-shield-spf-31-150-ml-exel.html",
-  ],
-  serums: [
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/serum-vitamina-b12-anti-rojeces-30-gr-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/idraet-facial/idraet-serums/serum-vitamina-b5-reparador-idraet-30-gr.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/idraet-serum-hialuronico-1-hidratacion-intensiva-30-g.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/booster-hyaluron-libra.html",
-    "https://www.cosmetologasargentinas.com/promociones-mensuales/idraet-amiin-step-3-serum-tratamiento-con-niacinamida-30-ml.html",
-    "https://www.cosmetologasargentinas.com/promociones-mensuales/serum-vitamina-c-acido-hialuronico-idraet-amiin-step-3-30-ml.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/booster-niacinamide-zinc-libra.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/booster-c-vitamin-libra.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/booster-collagen-libra.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/biobellus/suero-facial-nano-hialuronico-30-ml-biobellus.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/booster-instant-lift-libra.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/booster-calming-libra.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/booster-retinol-libra.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/biobellus/suero-facial-niacinamida-30-ml-biobellus.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/idraet-niacinamide-zinc-serum-pore-refiner-30-ml.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/exel-serum-niacinamida-vit-b3-30-ml.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/serum-therapy-n10-cicaboost-50-ml-libra.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/biobellus/suero-facial-iluminador-30-ml-biobellus.html",
-    "https://www.cosmetologasargentinas.com/lanzamientos/-vitamin-a-serum-serum-redensificante.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/serum-vitamina-c-retinol-30-cc-collage.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/prodermic/prodermic-facial/pdm-serums/pro-bio-eclair-50-ml-prodermic.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/lidherma/lidherma-facial/lidherma-serums/serum-hyaluronic-4d-20-gr-lidherma.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/prodermic/prodermic-facial/pdm-serums/pro-sos-balsam-200-ml-prodermic.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/carthage/solucion-facial-regeneracion-o2-carthage.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/icono/icono-fix-c-booster-20-ml.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/icono/icono-serum-esencial-regenerante-retinol-vitamina-e-30-ml.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/carthage/serum-dermo-calmante-x-60-cc-carthage.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/serum-pro-colageno-30-ml-biobellus.html",
-    "https://www.cosmetologasargentinas.com/facial/serums/pro-hyalu7-bioserum-30-ml.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/icono/icono-acido-hialuronico-30-cc.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/exel/exel-facial/exel-serums/producto-lujo-age-defy-30-ml-exel.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/prodermic/prodermic-facial/pdm-limpiadores/leche-de-limpieza-daily-clean-210-ml-prodermic.html",
-  ],
-  tonicos: [
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/agua-de-rosas-alpine-roses-brume-antiage-100-ml-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/idraet-facial/idraet-lociones/zenskin-sos-rescue-brume-bruma-calmante-de-rescate-100-ml.html",
-    "https://www.cosmetologasargentinas.com/promociones-mensuales/tonico-hidratante-con-centella-asiatica-acido-hialuronico-idraet-amiin-step-2-125-ml.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/biobellus/bruma-facial-relax-avena-y-calendula-biobellus-200-ml.html",
-    "https://www.cosmetologasargentinas.com/promociones-mensuales/idraet-amiin-step-1-tonico-equilibrante-con-acido-salicilico-2-x125ml.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/idraet-facial/idraet-lociones/idraet-vitamin-c-all-day-radiance-lotion-locion-revitalizante-100-ml.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/icono/splash-antioxidante-120-grs-vinoterapia-icono.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/prodermic/prodermic-facial/pdm-lociones/pro-hyaluronic-lotion-130-ml.html",
-  ],
-  "cremas-geles-emulsiones": [
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/pro-reti-c-crema-con-retinol-vitamina-c-50-gr-idraet.html",
-    "https://www.cosmetologasargentinas.com/idraet-cica-b5-light-emulsion-emulsion-fluida-60-ml.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/idraet-cica-b5-barrier-booster-cream-50-g-reparacion-calma-e-hidratacion-intensiva.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/idraet-facial/idraet-emulsiones-y-cremas/thermal-new-crema-hidratante-ligera-50-gr-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/idraet-facial/idraet-emulsiones-y-cremas/emulsion-niacinamide-zinc-hidratante-60-gr-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/exel/exel-gel-hidratante-reparador-vit-c-30-ml.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/idraet-facial/idraet-emulsiones-y-cremas/crema-gel-vitamina-c-reparador-75-ml-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/idraet-facial/idraet-emulsiones-y-cremas/crema-hidratante-pro-hyaluron-relleno-de-arrugas-50-ml-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/idraet-facial/idraet-emulsiones-y-cremas/crema-lifting-sublime-dmae-tensora-50-ml-idraet.html",
-    "https://www.cosmetologasargentinas.com/maquillaje/anti-age-hydrating-cream-crema-antiage-hidratante-30-g-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/lidherma/lidherma-facial/lidherma-emulsiones-y-cremas/solucion-dherma-science-10-amp-x-2-ml-c-u-lidherma.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/icono/crema-hidratante-plus-100-grs-icono.html",
-  ],
-  "contorno-de-ojos": [
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/vitamin-c-eyes-contorno-de-ojos-15-ml-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/contorno-de-ojos-thermal-new-15-ml-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/idraet-facial/idraet-contorno-de-ojos/contorno-de-ojos-pro-reti-c-eye-contour-reparador-15-gr-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/serum-sublime-eyes-pepetides-3-contorno-de-ojos-bolsas-y-ojeras-15-ml-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/parche-niacinamida-y-cafeina-eyes-descongestivo-16-ml-24-parches-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/idraet-facial/idraet-contorno-de-ojos/contorno-de-ojos-alpine-roses-10-gr-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/collage-contorno-peptidos-tensor-eyes-argireline-achialuronico-liposomas-de-cafeina-y-calendula-30-ml.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/lidherma/contorno-de-ojos-b12-refuerza-la-barrera-cutanea-15g-lidherma-.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/prodermic-lissage-bio-serum-new-30gr.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/contorno-de-ojos-con-acido-hialuronico-30-cc-collage.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/exel/exel-facial/exel-contorno-de-ojos/concentrado-facial-gel-p-cont-ojo-c-uniesf-y-aloe-pomo-30-ml-exel.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/lidherma/lidherma-facial/lidherma-contorno-de-ojos/contorno-de-ojos-hydrapore-15-gr-lidherma.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/idraet-facial/idraet-contorno-de-ojos/idraet-pro-hyaluron-eyes-crema-gel-contorno-de-ojos-15-grs-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/icono/eyes-complex-crema-30-grs-icono.html",
-  ],
-  otros: [
-    "https://www.cosmetologasargentinas.com/maquillaje/ojos/serum-fortalecedor-de-pestaas-xxlash-pro-15-ml-idraet.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/hydrating-lipstick-con-hialuronico-3-gr.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/exel/balsamo-reparador-de-labios-con-cbd-9-ml-exel.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/idraet/lash-brow-filler-fortalecedor-de-cejas-y-pestanas-25-ml.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/dherma-sun-fotoprotector-labial-fps-30-x-4g.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/carthage/voluminizador-labial-x-15cc-carthage.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/prodermic/prodermic-facial/pdm-mascaras/pro-hialu-collagen-11-gr-prodermic.html",
-    "https://www.cosmetologasargentinas.com/nuestras-marcas/icono/icono-megalip-scrub-tutti-frutti-nuevo-8-grs.html",
-  ],
-};
+const catalogData = JSON.parse(fs.readFileSync(configPath, "utf8"));
+const CATEGORIES = catalogData.categories || [];
+const URLS = catalogData.urls || {};
 
 const KNOWN_BRANDS = [
   "Green Line Exel",
@@ -172,25 +67,25 @@ function inferBrand(name, url) {
 
 function parseArsPrice(text) {
   if (!text) return null;
+  // Match the first valid price token (avoid concatenating current + discount prices)
+  const match = text.match(/\$?\s*(\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?)/);
+  if (!match) return null;
 
-  // 1. Buscamos un signo "$" seguido de un número (ej: "$ 10.080" o "$10.080,50")
-  const match = text.match(/\$\s*(\d{1,3}(?:\.\d{3})*(?:,\d+)?)/);
-  
-  let numStr = "";
-  if (match) {
-    numStr = match[1]; // Nos quedamos solo con el número, sin el $
-  } else {
-    // 2. Fallback: si no hay "$", tomamos el PRIMER número que encontremos
-    const fallback = text.match(/\d{1,3}(?:\.\d{3})*(?:,\d+)?/);
-    if (!fallback) return null;
-    numStr = fallback[0];
+  let cleaned = match[1];
+  if (cleaned.includes(".") && cleaned.includes(",")) {
+    cleaned = cleaned.replace(/\./g, "").replace(",", ".");
+  } else if (cleaned.includes(".")) {
+    const parts = cleaned.split(".");
+    if (parts.length > 1 && parts.every((p, i) => i === 0 || p.length === 3)) {
+      cleaned = cleaned.replace(/\./g, "");
+    }
+  } else if (cleaned.includes(",")) {
+    cleaned = cleaned.replace(",", ".");
   }
 
-  // 3. Normalizamos (quitamos puntos, cambiamos coma por punto) y convertimos
-  const normalized = numStr.replace(/\./g, "").replace(/,/g, ".");
-  const value = parseFloat(normalized);
-  
-  return Number.isFinite(value) ? Math.round(value) : null;
+  const value = parseFloat(cleaned);
+  // Cap at 10,000,000 ARS to protect against any corrupted string concatenations
+  return Number.isFinite(value) && value > 0 && value < 10000000 ? Math.round(value) : null;
 }
 
 function markup(price) {
@@ -203,46 +98,103 @@ function slugify(url) {
   return last.replace(/\.html?$/i, "");
 }
 
+// Loads previous products from products.ts to use as resilient fallback
+function loadExistingProducts(targetPath) {
+  if (!fs.existsSync(targetPath)) return new Map();
+  try {
+    const content = fs.readFileSync(targetPath, "utf8");
+    const map = new Map();
+    const regex = /\{\s*id:\s*"([^"]+)",\s*name:\s*"((?:\\.|[^"\\])*)",\s*brand:\s*"((?:\\.|[^"\\])*)",\s*category:\s*"([^"]+)",\s*price:\s*([0-9.]+),\s*compareAtPrice:\s*([^,]+),\s*image:\s*"([^"]+)"\s*\}/g;
+    let match;
+    while ((match = regex.exec(content)) !== null) {
+      const [, id, name, brand, category, priceStr, compareAtPriceStr, image] = match;
+      const price = parseFloat(priceStr);
+      const compareAt = compareAtPriceStr.trim() === "null" ? null : parseFloat(compareAtPriceStr.trim());
+      // Discard previously corrupted prices (> 10 million)
+      if (price > 10000000) continue;
+      map.set(id, {
+        id,
+        name: name.replace(/\\"/g, '"'),
+        brand: brand.replace(/\\"/g, '"'),
+        category,
+        price,
+        compareAtPrice: compareAt && compareAt < 10000000 ? compareAt : null,
+        image,
+      });
+    }
+    return map;
+  } catch (err) {
+    console.warn("Could not read previous products for fallback:", err.message);
+    return new Map();
+  }
+}
+
 async function scrapeOne(page, url, category) {
   try {
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 25000 });
   } catch (error) {
-    console.warn(`SKIP (Timeout o error de carga): ${url}`);
-    return null;
+    throw new Error(`Timeout o error de carga: ${error.message}`);
   }
 
-  await page.waitForSelector("h1", { timeout: 15000 }).catch(() => {});
+  await page.waitForSelector("h1", { timeout: 8000 }).catch(() => { });
 
   const name = await page.locator("h1").first().textContent().catch(() => null);
-  const priceText = await page
-    .locator(".current-price, .product-price, [itemprop='price'], .price")
-    .first()
-    .textContent({ timeout: 5000 })
-    .catch(() => null);
+
+  // Extract current price cleanly (checking content attribute and targeted child selectors first)
+  const priceSelectors = [
+    ".current-price [itemprop='price']",
+    ".current-price-value",
+    ".current-price",
+    ".product-price [itemprop='price']",
+    "[itemprop='price']",
+    ".product-price",
+    ".price",
+  ];
+
+  let currentPrice = null;
+  for (const sel of priceSelectors) {
+    const el = page.locator(sel).first();
+    const count = await el.count().catch(() => 0);
+    if (count > 0) {
+      const contentAttr = await el.getAttribute("content").catch(() => null);
+      if (contentAttr && !isNaN(parseFloat(contentAttr))) {
+        const val = parseFloat(contentAttr);
+        if (val > 0 && val < 10000000) {
+          currentPrice = Math.round(val);
+          break;
+        }
+      }
+      const text = await el.textContent().catch(() => null);
+      const parsed = parseArsPrice(text);
+      if (parsed !== null) {
+        currentPrice = parsed;
+        break;
+      }
+    }
+  }
+
   const regularText = await page
     .locator(".regular-price")
     .first()
-    .textContent({ timeout: 5000 })
+    .textContent({ timeout: 4000 })
     .catch(() => null);
-  const image = await page
-    .locator("#product-images img, .product-cover img, img[itemprop='image']")
-    .first()
-    .getAttribute("src", { timeout: 5000 })
-    .catch(() => null);
+  const regularPrice = parseArsPrice(regularText);
+
+  const imgEl = page.locator("#product-images img, .product-cover img, img[itemprop='image']").first();
+  const image =
+    (await imgEl.getAttribute("src", { timeout: 4000 }).catch(() => null)) ||
+    (await imgEl.getAttribute("data-src", { timeout: 1000 }).catch(() => null));
 
   if (!name || !image) {
-    console.warn(`SKIP (missing name/image): ${url}`);
-    return null;
+    throw new Error(`Falta nombre o imagen en ${url}`);
   }
 
   const cleanName = name.replace(/\s+/g, " ").trim();
-  const currentPrice = parseArsPrice(priceText);
-  const regularPrice = parseArsPrice(regularText);
   const price = markup(currentPrice);
   if (price === null) {
-    console.warn(`SKIP (no price): ${url}`);
-    return null;
+    throw new Error(`No se pudo obtener precio en ${url}`);
   }
+
   const onSale = regularPrice !== null && currentPrice !== null && currentPrice < regularPrice;
   const compareAtPrice = onSale ? markup(regularPrice) : null;
 
@@ -257,51 +209,198 @@ async function scrapeOne(page, url, category) {
   };
 }
 
+async function scrapeWithRetries(page, url, category, maxRetries = 2, logPrefix = "") {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const product = await scrapeOne(page, url, category);
+      if (product) return product;
+    } catch (err) {
+      if (attempt < maxRetries) {
+        console.warn(`${logPrefix} Reintentando (${attempt}/${maxRetries}): ${err.message}`);
+        await new Promise((r) => setTimeout(r, 2000));
+      } else {
+        console.warn(`${logPrefix} Falló tras ${maxRetries} intentos: ${err.message}`);
+      }
+    }
+  }
+  return null;
+}
+
 async function main() {
+  const startTime = Date.now();
+
+  // CLI Arguments parsing
+  const args = process.argv.slice(2);
+  const categoryFilter = args.find((a) => a.startsWith("--category="))?.split("=")[1];
+  const limitArg = args.find((a) => a.startsWith("--limit="))?.split("=")[1];
+  const urlArg = args.find((a) => a.startsWith("--url="))?.split("=")[1];
+  const concurrencyArg = args.find((a) => a.startsWith("--concurrency="))?.split("=")[1];
+
+  const CONCURRENCY = Math.max(1, parseInt(concurrencyArg || process.env.SCRAPE_CONCURRENCY || "4", 10));
+
+  const outPath = path.join(__dirname, "..", "src", "data", "products.ts");
+  const previousProductsMap = loadExistingProducts(outPath);
+
+  // Build target queue
+  let targets = [];
+  if (urlArg) {
+    targets.push({ url: urlArg, category: categoryFilter || "otros" });
+  } else {
+    const selectedCategories = categoryFilter ? [categoryFilter] : Object.keys(URLS);
+    for (const cat of selectedCategories) {
+      const list = URLS[cat] || [];
+      for (const url of list) {
+        targets.push({ url, category: cat });
+      }
+    }
+  }
+
+  if (limitArg) {
+    const limit = parseInt(limitArg, 10);
+    if (!isNaN(limit) && limit > 0) {
+      targets = targets.slice(0, limit);
+    }
+  }
+
+  if (targets.length === 0) {
+    console.error("No URLs to scrape. Check category filter or catalog-urls.json.");
+    process.exit(1);
+  }
+
+  console.log(`🚀 Iniciando importación: ${targets.length} productos con concurrencia de ${CONCURRENCY} workers...`);
+
   const browser = await chromium.launch({
     args: ["--disable-gpu", "--disable-dev-shm-usage", "--no-sandbox"],
   });
-  const context = await browser.newContext();
-  const page = await context.newPage();
-  page.setDefaultTimeout(25000);
 
-  await page.goto("https://www.cosmetologasargentinas.com/iniciar-sesion", { waitUntil: "domcontentloaded" });
-  await page.locator('input[type="email"], input[name*="mail" i]').first().fill(EMAIL);
-  await page.locator('input[type="password"]').first().fill(PASSWORD);
+  const context = await browser.newContext();
+
+  // Step 1: Login once with a dedicated page
+  console.log("Iniciando sesión en cosmetologasargentinas.com...");
+  const loginPage = await context.newPage();
+  loginPage.setDefaultTimeout(25000);
+
+  await loginPage.goto("https://www.cosmetologasargentinas.com/iniciar-sesion", { waitUntil: "domcontentloaded" });
+  await loginPage.locator('input[type="email"], input[name*="mail" i]').first().fill(EMAIL);
+  await loginPage.locator('input[type="password"]').first().fill(PASSWORD);
   await Promise.all([
-    page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 20000 }).catch(() => {}),
-    page.locator('button[type="submit"], input[type="submit"]').first().click(),
+    loginPage.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 20000 }).catch(() => { }),
+    loginPage.locator('button[type="submit"], input[type="submit"]').first().click(),
   ]);
-  const loggedIn = await page.locator('a[href*="cerrar-sesion"], a[href*="logout"], a[href*="mi-cuenta"]').count();
+
+  const loggedIn = await loginPage
+    .locator('a[href*="cerrar-sesion"], a[href*="logout"], a[href*="mi-cuenta"]')
+    .count();
+
   if (!loggedIn) {
     await browser.close();
     console.error("Login failed — aborting without touching products.ts.");
     process.exit(1);
   }
+  console.log("✅ Sesión iniciada correctamente.");
+  await loginPage.close();
 
-  const products = [];
-  const seenIds = new Set();
-  for (const category of Object.keys(URLS)) {
-    for (const url of URLS[category]) {
-      const p = await scrapeOne(page, url, category);
-      if (!p) continue;
-      if (seenIds.has(p.id)) continue;
-      seenIds.add(p.id);
-      products.push(p);
+  // Step 2: Block heavy assets (images, stylesheets, fonts, trackers) across all subsequent requests
+  await context.route("**/*", (route) => {
+    const type = route.request().resourceType();
+    if (["image", "media", "font", "stylesheet"].includes(type)) {
+      return route.abort();
     }
-    console.log(`${category}: ${products.filter((p) => p.category === category).length} products`);
+    const reqUrl = route.request().url().toLowerCase();
+    if (
+      reqUrl.includes("google-analytics") ||
+      reqUrl.includes("googletagmanager") ||
+      reqUrl.includes("facebook.net") ||
+      reqUrl.includes("clarity.ms") ||
+      reqUrl.includes("hotjar") ||
+      reqUrl.includes("connect.facebook")
+    ) {
+      return route.abort();
+    }
+    return route.continue();
+  });
+
+  // Step 3: Run worker pool
+  const results = new Array(targets.length);
+  let cursor = 0;
+  let fallbackCount = 0;
+  let successCount = 0;
+
+  const numWorkers = Math.min(CONCURRENCY, targets.length);
+
+  async function worker(workerId) {
+    const page = await context.newPage();
+    page.setDefaultTimeout(25000);
+
+    while (true) {
+      const index = cursor++;
+      if (index >= targets.length) break;
+
+      const target = targets[index];
+      const prefix = `[W${workerId}][${index + 1}/${targets.length}]`;
+
+      let product = await scrapeWithRetries(page, target.url, target.category, 2, prefix);
+
+      // Resilient fallback to previous data if scrape failed
+      if (!product) {
+        const slug = slugify(target.url);
+        const prev = previousProductsMap.get(slug);
+        if (prev) {
+          console.warn(`${prefix} ⚠️ Usando datos previos para: ${slug}`);
+          product = prev;
+          fallbackCount++;
+        }
+      }
+
+      results[index] = product;
+
+      if (product) {
+        successCount++;
+        console.log(`${prefix} ✅ [${product.category}] ${product.name.slice(0, 45)} -> $${product.price}`);
+      } else {
+        console.error(`${prefix} ❌ No se pudo obtener: ${target.url}`);
+      }
+    }
+
+    await page.close();
   }
 
+  const workers = Array.from({ length: numWorkers }, (_, i) => worker(i + 1));
+  await Promise.all(workers);
   await browser.close();
 
-  if (products.length < MIN_EXPECTED_PRODUCTS) {
-    console.error(
-      `Only got ${products.length} products (expected ~${Object.values(URLS).flat().length}). Aborting without touching products.ts.`
-    );
-    process.exit(1);
+  const validScraped = results.filter(Boolean);
+  const seenIds = new Set();
+  const finalProducts = [];
+
+  // Deduplicate products
+  for (const p of validScraped) {
+    if (seenIds.has(p.id)) continue;
+    seenIds.add(p.id);
+    finalProducts.push(p);
   }
 
-  const categoryList = CATEGORIES.filter((c) => products.some((p) => p.category === c.slug));
+  // If running a partial update (--category or --url), preserve the rest of previous products
+  if (categoryFilter || urlArg || limitArg) {
+    console.log("Modo selectivo activo: fusionando resultados con el catálogo existente...");
+    for (const [id, prev] of previousProductsMap.entries()) {
+      if (!seenIds.has(id)) {
+        seenIds.add(id);
+        finalProducts.push(prev);
+      }
+    }
+  } else {
+    // Full run check
+    if (finalProducts.length < MIN_EXPECTED_PRODUCTS) {
+      console.error(
+        `Only got ${finalProducts.length} products (expected >= ${MIN_EXPECTED_PRODUCTS}). Aborting without touching products.ts.`
+      );
+      process.exit(1);
+    }
+  }
+
+  // Write products.ts
+  const categoryList = CATEGORIES.filter((c) => finalProducts.some((p) => p.category === c.slug));
 
   const ts = (v) => JSON.stringify(v);
   const lines = [];
@@ -323,10 +422,9 @@ async function main() {
   lines.push(`export const categories: Category[] = ${JSON.stringify(categoryList, null, 2)};`);
   lines.push("");
   lines.push("export const products: Product[] = [");
-  for (const p of products) {
+  for (const p of finalProducts) {
     lines.push(
-      `  { id: ${ts(p.id)}, name: ${ts(p.name)}, brand: ${ts(p.brand)}, category: ${ts(p.category)}, price: ${p.price}, compareAtPrice: ${
-        p.compareAtPrice === null ? "null" : p.compareAtPrice
+      `  { id: ${ts(p.id)}, name: ${ts(p.name)}, brand: ${ts(p.brand)}, category: ${ts(p.category)}, price: ${p.price}, compareAtPrice: ${p.compareAtPrice === null ? "null" : p.compareAtPrice
       }, image: ${ts(p.image)} },`
     );
   }
@@ -341,9 +439,14 @@ async function main() {
 }
 `);
 
-  const outPath = path.join(__dirname, "..", "src", "data", "products.ts");
   fs.writeFileSync(outPath, lines.join("\n"), "utf8");
-  console.log(`Wrote ${products.length} products across ${categoryList.length} categories to ${outPath}`);
+
+  const elapsedSeconds = ((Date.now() - startTime) / 1000).toFixed(1);
+  console.log(`\n🎉 Finalizado en ${elapsedSeconds}s:`);
+  console.log(`   - Total productos guardados: ${finalProducts.length}`);
+  console.log(`   - Obtenidos en vivo: ${successCount - fallbackCount}`);
+  console.log(`   - Preservados de catálogo previo (fallback): ${fallbackCount}`);
+  console.log(`   - Archivo escrito: ${outPath}\n`);
 }
 
 main().catch((err) => {
