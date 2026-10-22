@@ -186,16 +186,23 @@ async function scrapeOne(page, url, category) {
     (await imgEl.getAttribute("src", { timeout: 4000 }).catch(() => null)) ||
     (await imgEl.getAttribute("data-src", { timeout: 1000 }).catch(() => null));
 
-  // Extract product description from div.col-md-6 / product-description container
-  const descriptionText = await page
-    .locator(".product-description, .col-md-6 .product-description, [itemprop='description'], .product-information")
-    .first()
+  // Extraer únicamente la descripción de producto (.product-description o su <p>),
+  // descartando .product-information (que trae toda la ficha/precios) y #product-description-short (precio sugerido)
+  const descLocator = page.locator(
+    ".col-md-6 .product-description p, .col-md-6 .product-description, .product-description:not([id*='short']) p, .product-description:not([id*='short'])"
+  ).first();
+
+  const descriptionRaw = await descLocator
     .textContent({ timeout: 3000 })
     .catch(() => null);
 
-  const cleanDescription = descriptionText
-    ? descriptionText.replace(/\s+/g, " ").trim().slice(0, 350)
-    : null;
+  let cleanDescription = null;
+  if (descriptionRaw) {
+    const text = descriptionRaw.replace(/\s+/g, " ").trim();
+    if (text && !text.toLowerCase().startsWith("p.sugerido")) {
+      cleanDescription = text.slice(0, 350);
+    }
+  }
 
   if (!name || !image) {
     throw new Error(`Falta nombre o imagen en ${url}`);
