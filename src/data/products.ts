@@ -11,6 +11,7 @@ export type Product = {
   price: number;
   compareAtPrice: number | null;
   image: string;
+  description?: string | null;
 };
 
 export const categories: Category[] = [

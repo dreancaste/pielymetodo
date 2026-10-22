@@ -104,10 +104,10 @@ function loadExistingProducts(targetPath) {
   try {
     const content = fs.readFileSync(targetPath, "utf8");
     const map = new Map();
-    const regex = /\{\s*id:\s*"([^"]+)",\s*name:\s*"((?:\\.|[^"\\])*)",\s*brand:\s*"((?:\\.|[^"\\])*)",\s*category:\s*"([^"]+)",\s*price:\s*([0-9.]+),\s*compareAtPrice:\s*([^,]+),\s*image:\s*"([^"]+)"\s*\}/g;
+    const regex = /\{\s*id:\s*"([^"]+)",\s*name:\s*"((?:\\.|[^"\\])*)",\s*brand:\s*"((?:\\.|[^"\\])*)",\s*category:\s*"([^"]+)",\s*price:\s*([0-9.]+),\s*compareAtPrice:\s*([^,]+),\s*image:\s*"([^"]+)"(?:,\s*description:\s*"((?:\\.|[^"\\])*)")?\s*\}/g;
     let match;
     while ((match = regex.exec(content)) !== null) {
-      const [, id, name, brand, category, priceStr, compareAtPriceStr, image] = match;
+      const [, id, name, brand, category, priceStr, compareAtPriceStr, image, desc] = match;
       const price = parseFloat(priceStr);
       const compareAt = compareAtPriceStr.trim() === "null" ? null : parseFloat(compareAtPriceStr.trim());
       // Discard previously corrupted prices (> 10 million)
@@ -120,6 +120,7 @@ function loadExistingProducts(targetPath) {
         price,
         compareAtPrice: compareAt && compareAt < 10000000 ? compareAt : null,
         image,
+        description: desc ? desc.replace(/\\"/g, '"') : null,
       });
     }
     return map;
@@ -185,6 +186,17 @@ async function scrapeOne(page, url, category) {
     (await imgEl.getAttribute("src", { timeout: 4000 }).catch(() => null)) ||
     (await imgEl.getAttribute("data-src", { timeout: 1000 }).catch(() => null));
 
+  // Extract product description from div.col-md-6 / product-description container
+  const descriptionText = await page
+    .locator(".product-description, .col-md-6 .product-description, [itemprop='description'], .product-information")
+    .first()
+    .textContent({ timeout: 3000 })
+    .catch(() => null);
+
+  const cleanDescription = descriptionText
+    ? descriptionText.replace(/\s+/g, " ").trim().slice(0, 350)
+    : null;
+
   if (!name || !image) {
     throw new Error(`Falta nombre o imagen en ${url}`);
   }
@@ -206,6 +218,7 @@ async function scrapeOne(page, url, category) {
     price,
     compareAtPrice: compareAtPrice && compareAtPrice > price ? compareAtPrice : null,
     image,
+    description: cleanDescription,
   };
 }
 
@@ -417,15 +430,17 @@ async function main() {
   lines.push("  price: number;");
   lines.push("  compareAtPrice: number | null;");
   lines.push("  image: string;");
+  lines.push("  description?: string | null;");
   lines.push("};");
   lines.push("");
   lines.push(`export const categories: Category[] = ${JSON.stringify(categoryList, null, 2)};`);
   lines.push("");
   lines.push("export const products: Product[] = [");
   for (const p of finalProducts) {
+    const desc = p.description ? `, description: ${ts(p.description)}` : "";
     lines.push(
       `  { id: ${ts(p.id)}, name: ${ts(p.name)}, brand: ${ts(p.brand)}, category: ${ts(p.category)}, price: ${p.price}, compareAtPrice: ${p.compareAtPrice === null ? "null" : p.compareAtPrice
-      }, image: ${ts(p.image)} },`
+      }, image: ${ts(p.image)}${desc} },`
     );
   }
   lines.push("];");
