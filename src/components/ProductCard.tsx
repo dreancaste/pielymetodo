@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import Image from "next/image";
 import type { Product } from "@/data/products";
 import { formatPrice } from "@/data/products";
@@ -10,7 +10,7 @@ export default function ProductCard({ product }: { product: Product }) {
   const { addItem } = useCart();
   const [added, setAdded] = useState(false);
 
-  function handleAdd(e?: React.MouseEvent) {
+  function handleAdd(e?: MouseEvent) {
     if (e) e.stopPropagation();
     addItem({
       id: product.id,
@@ -41,7 +41,7 @@ export default function ProductCard({ product }: { product: Product }) {
           alt={product.name}
           fill
           sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-          className="object-contain p-4 transition-transform duration-500 ease-out group-hover:scale-108"
+          className="object-contain p-4 transition-transform duration-500 ease-out group-hover:scale-105"
         />
       </div>
 
@@ -78,9 +78,9 @@ export default function ProductCard({ product }: { product: Product }) {
         </div>
       </div>
 
-      {/* Panel flotante con detalles que se muestra al posar el mouse (div.col-md-6) */}
+      {/* Panel flotante con detalles que se muestra al posar el mouse */}
       <div
-        className="col-md-6 pointer-events-none absolute inset-0 z-20 flex flex-col justify-between rounded-2xl border border-rose-light/80 bg-cream/95 p-5 opacity-0 shadow-2xl backdrop-blur-md transition-all duration-300 ease-out translate-y-3 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100"
+        className="invisible pointer-events-none absolute inset-0 z-20 flex flex-col justify-between rounded-2xl border border-rose-light/80 bg-cream/95 p-5 opacity-0 shadow-2xl backdrop-blur-md transition-all duration-300 ease-out translate-y-3 group-hover:visible group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100"
       >
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center justify-between">
